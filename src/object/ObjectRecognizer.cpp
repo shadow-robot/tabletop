@@ -111,12 +111,12 @@ struct ObjectRecognizer : public object_recognition_core::db::bases::ModelReader
       std::vector<std::string> attachments_names = document.attachment_names();
       std::string mesh_path;
       BOOST_FOREACH(const std::string & attachment_name, attachments_names) {
-        if (attachment_name.find("original") != 0)
+        if (attachment_name.find("mesh") != 0)
           continue;
         // Create a temporary file
         char mesh_path_tmp[L_tmpnam];
         tmpnam(mesh_path_tmp);
-        mesh_path = std::string(mesh_path_tmp) + attachment_name.substr(8);
+        mesh_path = std::string(mesh_path_tmp) + attachment_name.substr(4);
 
         // Load the mesh and save it to the temporary file
         std::ofstream mesh_file;
@@ -155,6 +155,7 @@ struct ObjectRecognizer : public object_recognition_core::db::bases::ModelReader
         const struct aiMesh* mesh = scene->mMeshes[i_mesh];
         size_t size_ini = mesh_msg.vertices.size();
         mesh_msg.vertices.resize(size_ini + mesh->mNumVertices);
+        std::cout << "Mesh: " << i_mesh << " mNumVertices: " << mesh->mNumVertices << std::endl;
         for (size_t j = 0; j < mesh->mNumVertices; ++j) {
           const aiVector3D& vertex = mesh->mVertices[j];
           mesh_msg.vertices[size_ini + j].x = vertex.x;
@@ -166,12 +167,23 @@ struct ObjectRecognizer : public object_recognition_core::db::bases::ModelReader
 
         size_t size_ini_triangles = mesh_msg.triangles.size();
         mesh_msg.triangles.resize(size_ini_triangles + mesh->mNumFaces);
+        std::cout << "Mesh: " << i_mesh << " mNumFaces: " << mesh->mNumFaces << std::endl;
         size_t j_triangles = size_ini_triangles;
         for (size_t j = 0; j < mesh->mNumFaces; ++j) {
           const aiFace& face = mesh->mFaces[j];
-          for (size_t k = 0; k < 3; ++k)
-            mesh_msg.triangles[j_triangles].vertex_indices[k] = size_ini + face.mIndices[k];
-          ++j_triangles;
+          std::cout << "after " << j << std::endl;
+          std::cout << "face[" << j << "] address: " << mesh->mFaces << std::endl;
+          std::cout << "face[" << j << "].mNumIndices: " << face.mNumIndices << std::endl;
+          if (face.mNumIndices == 3){
+            for (size_t k = 0; k < 3; ++k){
+              std::cout << "size_ini: " << size_ini << std::endl;
+              std::cout << "face.mIndices[" << k << "]"  << face.mIndices[k] << std::endl;
+              mesh_msg.triangles[j_triangles].vertex_indices[k] = size_ini + face.mIndices[k];
+            }
+            ++j_triangles;
+          }
+          else
+            std::cout << "Face[" << j << "] is not a triangle" << std::endl;
         }
         mesh_msg.triangles.resize(j_triangles);
       }
